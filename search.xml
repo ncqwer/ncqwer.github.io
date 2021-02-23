@@ -1,19 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>test</title>
-    <url>/2021/02/11/test/</url>
-    <content><![CDATA[<h1 id="test1">test1</h1>
-<p>sjdkfljsflsf</p>
-<p><span class="math display">\[\begin{equation} \label{eq2}
-\begin{aligned}
-a &amp;= b + c \\
-  &amp;= d + e + f + g \\
-  &amp;= h + i
-\end{aligned}
-\end{equation}\]</span></p>
-<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="keyword">interface</span> TypeA&#123;</span><br><span class="line">  sayHello:<span class="function">()=&gt;</span><span class="built_in">string</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+    <title>case-match(1) 灵感</title>
+    <url>/2021/02/22/case-match-1-%E7%81%B5%E6%84%9F/</url>
+    <content><![CDATA[<h2 id="前景提要">前景提要</h2>
+<p>在js|ts编码过程中，根据不同类型的数据类型选择不同的代码分支是一个很常见的需求。针对这一情景，程序员门也提供了多种方式处理这一问题。例如：</p>
+<p>方案一： <figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 使用 instanceof 操作符</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">A</span></span>&#123;&#125;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">B</span></span>&#123;&#125;</span><br><span class="line"><span class="keyword">const</span> simplest = <span class="function">(<span class="params">value:A|B</span>)=&gt;</span>&#123;</span><br><span class="line">  <span class="keyword">if</span>(value <span class="keyword">instanceof</span> A) <span class="keyword">return</span> methodA(value);</span><br><span class="line">  <span class="keyword">if</span>(value <span class="keyword">instanceof</span> B) <span class="keyword">return</span> methodB(value);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure> 方案二： <figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 使用 基类 操作符</span></span><br><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">Base</span></span>&#123;</span><br><span class="line">  <span class="keyword">abstract</span> method():<span class="built_in">any</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">A</span> <span class="keyword">extends</span> <span class="title">Base</span></span>&#123;</span><br><span class="line">  <span class="function"><span class="title">method</span>(<span class="params"></span>)</span>&#123;&#125;</span><br><span class="line">&#125; </span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">B</span> <span class="keyword">extends</span> <span class="title">Base</span></span>&#123;</span><br><span class="line">  <span class="function"><span class="title">method</span>(<span class="params"></span>)</span>&#123;&#125;</span><br><span class="line">&#125; </span><br></pre></td></tr></table></figure> 除了以上方案外，程序员门还创造出一些抽象层次更高的解决方案（例如策略模式等），这里就不一一例举了。</p>
+<blockquote>
+<p>处于文章结构考虑，我们先“选择性忽视”基于函数重载的方案，关于函数重载的套路我们放在了这儿。</p>
+</blockquote>
+<h2 id="可读性">可读性</h2>
+<p>衡量一段代码质量的时候，又一个较为重要的指标-<strong>可读性</strong>，它旨在在阅读代码的过程中提供简明的信息来指明代码的具体含义。基于这一目的，我们可以有一个模糊映像： - 代码尽可能偏向自然语言 - 代码尽可能简短，这提供了尽可能高的信息密度</p>
+<p>现在，让我们回过头去，我们会发现之前一些方案的一些问题：</p>
+<p>方案一：重复使用<code>if() return</code>的形式,但具体编写过程中，判断条件往往由于不同的数据类型而使用不同的判断方式：</p>
+<ul>
+<li>number： <code>typeof v === 'number'</code></li>
+<li>string: <code>typeof v === 'string'</code></li>
+<li>boolean： <code>typeof v === 'boolean'</code></li>
+<li>array： <code>Array.is(v)</code></li>
+<li>class A: <code>v instanceof A</code></li>
+</ul>
+<p>这种不一致在一定程度上造成了阅读的“障碍”。同时，这种编写方式，总是会允许在<code>if-return</code>结构中新增其他代码，而一旦新增了代码，就会破坏该处代码结构上的一致性，进而降低了一致行。（虽然这可以通过代码规范了禁止这种情况的发现，但人类总是会犯错的，不是吗？）</p>
+<p>方案二：它使用了ts关于继承和虚函数的相关背景知识，而这些知识处于“隐喻”地位，不直观，需要代码阅读者了解相关知识才能获得信息。同时，它是基于class的方案，对于大部分场景来说，它太重了。</p>
+<h2 id="函数重载">函数重载</h2>
+<p>在之前讨论的中，我们选择性忽视了基于函数重载的方案。现在我们看一下：</p>
+<blockquote>
+<p>由于js｜ts语言的动态类型，js并没有函数重载方案，ts的函数重载仅仅作用于类型空间，故使用其他的语言来描述：</p>
+</blockquote>
+<p>C语言： <figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">method</span><span class="params">(<span class="keyword">const</span> <span class="keyword">int</span>&amp; v)</span></span>&#123;<span class="keyword">return</span> v;&#125;</span><br><span class="line"><span class="function"><span class="keyword">char</span>* <span class="title">method</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span>* v)</span></span>&#123;<span class="keyword">return</span> v;&#125;</span><br></pre></td></tr></table></figure> haskell语言: <figure class="highlight haskell"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">data</span> <span class="type">Book</span></span></span><br><span class="line">  = <span class="type">BookStr</span> <span class="type">String</span></span><br><span class="line">  | <span class="type">BookInt</span> <span class="type">Int</span></span><br><span class="line">  | <span class="type">BookComplex</span> <span class="type">String</span> <span class="type">Int</span></span><br><span class="line"></span><br><span class="line"><span class="title">test</span> :: <span class="type">Book</span> -&gt; <span class="type">String</span></span><br><span class="line"><span class="title">test</span> (<span class="type">BookStr</span> v) = v</span><br><span class="line"><span class="title">test</span> (<span class="type">BookInt</span> _) = <span class="string">&quot;no str&quot;</span></span><br><span class="line"><span class="title">test</span> (<span class="type">BookComplex</span> v _) = v</span><br></pre></td></tr></table></figure> 在函数重载的示例中，不难看出，函数重载的实现方式在某种程度上都好于上述的两种方案： - 更符合自然语意：函数接受某种类型-&gt;函数执行某段代码逻辑。 - 更加不容易出错：函数重载的特定性阻止了其他不一致的实现方案。</p>
+<p>综上，我们可以得出结论，函数重载在一定程度上可以更好的辅助解决常见的<code>if-then</code>逻辑。</p>
+<h2 id="jsts-函数重载">js｜ts “函数重载”</h2>
+<p>之前提到过，受限于动态类型，<code>js|ts</code>并没有完全体的函数重载方案。但，这并不影响我们通过编写额外的代码来提供一个仿照版的方案。说干就干，先让我们想想我们希望的客户端代码样子： <figure class="highlight js"><table><tr><td class="code"><pre><span class="line"><span class="keyword">const</span> method = m</span><br><span class="line">  .case(TypeA,methodA) <span class="comment">// 使用case来定义处理逻辑</span></span><br><span class="line">  .case(TypeB,methodB)</span><br><span class="line">  .case(TypeC,methodC)</span><br><span class="line">  <span class="comment">//...</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">method(valueA)<span class="comment">// run methodA</span></span><br><span class="line">method(valueB)<span class="comment">// run methodB</span></span><br><span class="line">method(valueC)<span class="comment">// run methodC</span></span><br></pre></td></tr></table></figure> 整个实现方案的核心点是 - 将类型信息与相关的处理函数关联起来，在我们的实现方案中，我们使用<code>case</code>函数来完成这一效果。 - <code>case</code>函数返回的是事实上的处理函数，它接受特定类型的值，并从值中获得对应类型（这里我们使用的是值的构造器），并以其存储的值的构造列表为参数来调用通过<code>case</code>函数定义的处理函数。</p>
+<h2 id="总结">总结</h2>
+<p>为了寻找更好（指可读性）的解决方案（指处理根据不同类型的数据类型选择不同的代码分支这一问题），我们回顾了一些常见的处理方法（<code>if-return</code>代码结构，类的继承，函数重载等），并判断出函数重载是一个较为优秀的方式。</p>
+<p>但同时，受限于js|ts的函数重载功能的不完善，我们并不能获得开箱即用的函数重载。故我们决定"自力更生",并"暂时"决定了大致的api行为。</p>
+<p>接下来，让我们开始编写具体代码实现吧！</p>
+<blockquote>
+<p>实际上，如果你并不关心具体实现，仅仅只是想尝试类似api的case。目前npm上已经有了<a href="https://www.npmjs.com/package/@zhujianshi/case-match">相关的实现</a>（它的实现代码即是是本系列之后文章的主要内容），你可以在本地或<a href="https://runkit.com/">runkit</a>体验。</p>
+</blockquote>
 ]]></content>
+      <tags>
+        <tag>ts tricks functianal</tag>
+      </tags>
   </entry>
   <entry>
     <title>Hello World</title>
@@ -32,6 +60,21 @@ a &amp;= b + c \\
 <h3 id="deploy-to-remote-sites">Deploy to remote sites</h3>
 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
 <p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
+]]></content>
+  </entry>
+  <entry>
+    <title>test</title>
+    <url>/2021/02/11/test/</url>
+    <content><![CDATA[<h1 id="test1">test1</h1>
+<p>sjdkfljsflsf</p>
+<p><span class="math display">\[\begin{equation} \label{eq2}
+\begin{aligned}
+a &amp;= b + c \\
+  &amp;= d + e + f + g \\
+  &amp;= h + i
+\end{aligned}
+\end{equation}\]</span></p>
+<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="keyword">interface</span> TypeA&#123;</span><br><span class="line">  sayHello:<span class="function">()=&gt;</span><span class="built_in">string</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 ]]></content>
   </entry>
 </search>
